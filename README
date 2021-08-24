@@ -1,0 +1,129 @@
+###############################################################################
+#
+# Copyright (c) 2019-2020, NVIDIA CORPORATION. All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+#  * Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+#  * Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+#  * Neither the name of NVIDIA CORPORATION nor the names of its
+#    contributors may be used to endorse or promote products derived
+#    from this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ``AS IS'' AND ANY
+# EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+# PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+# PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+# OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+###############################################################################
+
+- WebRTC is a free open project that provides browsers and mobile apps with Real-Time Communication Capabilities
+- One of the major functions of WebRTC endpoints is the ability to send and receive interactive HD videos
+- This creates a requirement for H/W accelerated video encoding for fast processing
+- Here we have integrated the support of H/W Accelerated H264 Encoding in WebRTC encoding framework
+
+webRTC Package includes:
+
+    * libwebrtc.a - library file of webrtc
+
+    * video_loopback - App to test basic video loopback functionality
+
+    * modules_tests - Encoder Unit test
+
+    * peerconnection_server - App that creates server and interface to clients
+
+    * peerconnection_client - App connects to server and other clients
+    
+    * webrtc_headers
+
+    * Base commit id: 4db954eec11258d57e0d507b0436a183178dae22
+      Commit id corresponds to OSS WebRTC project used for development.
+
+
+=======================================================================================
+
+Run the video loopback application:
+     ./video_loopback --codec H264 --width 1280 --height 720 --capture_device_index 0
+
+  Arguments description:
+     --codec : H264 (as only H264 is currently accelerated)
+     --width: desired width
+     --height: desired height
+     --capture_device_index: index of /dev/videoX
+
+=======================================================================================
+
+Peerconnection_client/server app
+  1) Camera setup :
+     Connect USB Camera to Jetson
+  2) Server setup :
+     a) Start peerconnection_server app on Jetson platform
+     b) Command:
+          ./peerconnection_server
+        This will start server on port 8888 with default configuration
+  3) Client setup :
+     I. Client 1 (Jetson Platform)
+        a) Start peerconnection_client app on Jetson platform
+        b) Command:
+             ./peerconnection_client --autoconnect --server <Server.IP>
+           This will connect to the server automatically
+     II. Client 2 (Jetson Platform)
+        a) Start peerconnection_client app on Jetson platform
+        b) Command :
+             ./peerconnection_client --server <Server.IP> --autoconnect --autocall
+           This will connect to the server and will call the other client.
+
+=======================================================================================
+
+H264 Unit test for NvEncoder
+  1) Run the gtest :
+     ./modules_tests --gtest_filter="TestNvH264Impl.*" --gtest_repeat=<num_of_iterations>
+
+=======================================================================================
+
+
+=======================================================================================
+
+How to use NvVideoEncoderFactory to create NvEncoder
+
+  1) std::unique_ptr<VideoEncoder> CreateVideoEncoder(const webrtc::SdpVideoFormat& format) - 
+         Arguments:
+            format - Accepts argument of type SdpVideoFormat
+         Return :
+            Returns an encoder instance of type VideoEncoder
+         This API creates NvVideoEncoder for the format specified as argument (currently only H264 is supported)
+
+  2) CodecInfo QueryVideoEncoder(const SdpVideoFormat& format) - 
+         Arguments:
+            format - Accepts argument of type SdpVideoFormat
+         Return :
+            Returns an codecinfo, if the format is supported
+         This API Queries the Encoder for the format specified as argument (currently only H264 is supported)
+         and returns the codecinfo
+
+  3) std::vector<SdpVideoFormat> GetSupportedFormats() - 
+         Return :
+            Returns a vector of SdpVideoFormat with all the supported formats by the Encoder
+         This API returns a vector with all the formats that are supported by the Encoder
+
+=======================================================================================
+
+
+Troubleshooting: In case, on Jetson platform we see error for pulseaudio:
+                     - Install pulseaudio with sudo apt install pulseaudio
+                     - Start the pulseaudio daemon with pulseaudio --start
+
+Known Issue:  - peerconnection_server, peerconnection_client hangs after 30-45 seconds
+                this is a known issue with OSS encoders as well.
+              - video_loopback application will only work with H264 encoder
